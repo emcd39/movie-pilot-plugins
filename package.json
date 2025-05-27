@@ -1,0 +1,14 @@
+{
+    "st98sign": {
+        "name": "98堂自动签到&评论",
+        "description": "98堂自动签到和评论插件",
+        "labels": "评论, 签到, 98堂",
+        "version": "1.1.0",
+        "icon": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/Ferdi_B.png",
+        "author": "Desire",
+        "level": 1,
+        "v2": true,
+        "history": {
+        }
+    }
+}
