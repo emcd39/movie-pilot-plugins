@@ -10,13 +10,13 @@
         "v2": true,
         "history": {}
     },
-    "SiteStatisticMessageOptimization": {
-        "name": "站点数据统计-消息优化版",
+    "SiteStatisticsByYanTao": {
+        "name": "站点数据统计(颜涛专版)",
         "description": "站点统计数据图表。",
         "labels": "站点,仪表板",
         "version": "1.7",
         "icon": "statistic.png",
-        "author": "lightolly,jxxghp",
+        "author": "yantao",
         "level": 2,
         "history": {
             "v1.7": "优化推送文案",
