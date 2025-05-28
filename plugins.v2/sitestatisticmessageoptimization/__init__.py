@@ -26,13 +26,13 @@ lock = Lock()
 
 class SiteStatistic(_PluginBase):
     # 插件名称
-    plugin_name = "站点数据统计"
+    plugin_name = "站点数据统计-消息优化版"
     # 插件描述
     plugin_desc = "站点统计数据图表。"
     # 插件图标
     plugin_icon = "statistic.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "lightolly,jxxghp"
     # 作者主页
