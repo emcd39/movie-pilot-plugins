@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 lock = Lock()
 
 
-class SiteStatistic(_PluginBase):
+class SiteStatisticMessageOptimization(_PluginBase):
     # 插件名称
     plugin_name = "站点数据统计-消息优化版"
     # 插件描述
@@ -38,7 +38,7 @@ class SiteStatistic(_PluginBase):
     # 作者主页
     author_url = "https://github.com/lightolly"
     # 插件配置项ID前缀
-    plugin_config_prefix = "sitestatistic_"
+    plugin_config_prefix = "SiteStatisticMessageOptimization_"
     # 加载顺序
     plugin_order = 1
     # 可使用的用户级别
