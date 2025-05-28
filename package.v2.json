@@ -10,7 +10,7 @@
         "v2": true,
         "history": {}
     },
-    "SiteStatistic": {
+    "SiteStatisticMessageOptimization": {
         "name": "站点数据统计-消息优化版",
         "description": "站点统计数据图表。",
         "labels": "站点,仪表板",
