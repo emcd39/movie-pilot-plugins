@@ -27,9 +27,9 @@ class st98sign(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/Ferdi_B.png"
     # 插件版本
-    plugin_version = "1.1.0"
+    plugin_version = "1.2.1"
     # 插件作者
-    plugin_author = "Desire"
+    plugin_author = "Vito"
     # 作者主页
     author_url = "https://github.com"
     # 插件配置项ID前缀
@@ -52,11 +52,16 @@ class st98sign(_PluginBase):
     _reply_cron = None
     _sign_onlyonce = False
     _reply_onlyonce = False
-    _reply_fid = 103  # 默认高清中文字幕区
+    _reply_fid = 155  # 默认高清中文字幕区
     _reply_times = 1 # 添加私有属性
     _auto_replies_str = "" # 存储原始的回复文本
     _auto_replies = []     # 解析后的回复列表
     _history_days = 30
+    # 新增：延迟和间隔配置
+    _delay_min = 5
+    _delay_max = 95
+    _interval_min = 35
+    _interval_max = 105
 
     _scheduler_sign: Optional[BackgroundScheduler] = None
     _scheduler_reply: Optional[BackgroundScheduler] = None
@@ -134,6 +139,38 @@ class st98sign(_PluginBase):
                 except (ValueError, TypeError):
                      logger.warning(f"配置中的 history_days 无效，将使用默认值 30。原始值: {config.get('history_days')}")
                      self._history_days = 30
+                
+                # 读取并校验延迟和间隔配置
+                try:
+                    self._delay_min = int(config.get('delay_min_seconds', 5))
+                    if self._delay_min < 0: self._delay_min = 0 # 不允许负数
+                except (ValueError, TypeError):
+                    logger.warning(f"配置中的 delay_min_seconds 无效，将使用默认值 5。原始值: {config.get('delay_min_seconds')}")
+                    self._delay_min = 5
+                    
+                try:
+                    self._delay_max = int(config.get('delay_max_seconds', 300))
+                    if self._delay_max < self._delay_min: self._delay_max = self._delay_min # 确保最大值不小于最小值
+                except (ValueError, TypeError):
+                    logger.warning(f"配置中的 delay_max_seconds 无效，将使用默认值 300。原始值: {config.get('delay_max_seconds')}")
+                    self._delay_max = 300
+                    if self._delay_max < self._delay_min: self._delay_max = self._delay_min # 再次确保
+
+                try:
+                    self._interval_min = int(config.get('interval_min_seconds', 15))
+                    if self._interval_min < 0: self._interval_min = 0
+                except (ValueError, TypeError):
+                    logger.warning(f"配置中的 interval_min_seconds 无效，将使用默认值 15。原始值: {config.get('interval_min_seconds')}")
+                    self._interval_min = 15
+                
+                try:
+                    self._interval_max = int(config.get('interval_max_seconds', 35))
+                    if self._interval_max < self._interval_min: self._interval_max = self._interval_min
+                except (ValueError, TypeError):
+                    logger.warning(f"配置中的 interval_max_seconds 无效，将使用默认值 35。原始值: {config.get('interval_max_seconds')}")
+                    self._interval_max = 35
+                    if self._interval_max < self._interval_min: self._interval_max = self._interval_min
+                    
 
                 # 解析自定义回复内容
                 if self._auto_replies_str:
@@ -448,14 +485,10 @@ class st98sign(_PluginBase):
         is_manual = self._manual_trigger_sign
         trigger_type = "手动触发" if is_manual else "定时触发"
         if not is_manual:
-            delay = random.uniform(5, 300)
-            logger.info(f"定时任务触发 (签到)，随机延迟 {delay:.2f} 秒后执行...")
+            # 使用配置的延迟范围
+            delay = random.uniform(self._delay_min, self._delay_max)
+            logger.info(f"定时任务触发 (签到)，随机延迟 {delay:.2f} 秒后执行 ({self._delay_min}-{self._delay_max}秒范围)...")
             time.sleep(delay)
-
-        # 检查今天是否已执行（仅针对非手动触发）
-        if not is_manual and self._is_already_done_today(history_key):
-            logger.info("根据历史记录，今日已签到，跳过本次执行")
-            return
 
         # 重置手动触发标志
         self._manual_trigger_sign = False
@@ -717,15 +750,11 @@ class st98sign(_PluginBase):
         is_manual = self._manual_trigger_reply
         trigger_type = "手动触发" if is_manual else "定时触发"
         if not is_manual:
-            delay = random.uniform(5, 300) # 5到300秒随机延迟
-            logger.info(f"定时任务触发 (回复)，随机延迟 {delay:.2f} 秒后执行...")
+            # 使用配置的延迟范围
+            delay = random.uniform(self._delay_min, self._delay_max) 
+            logger.info(f"定时任务触发 (回复)，随机延迟 {delay:.2f} 秒后执行 ({self._delay_min}-{self._delay_max}秒范围)...")
             time.sleep(delay)
             
-        # 检查今天是否已执行（仅针对非手动触发） - 这个检查放在循环外，只判断是否需要启动这一轮回复
-        if not is_manual and self._is_already_done_today(history_key):
-            logger.info("根据历史记录，今日已回复过，跳过本次执行")
-            return
-
         # 重置手动触发标志 (在循环开始前重置)
         self._manual_trigger_reply = False
         
@@ -786,14 +815,15 @@ class st98sign(_PluginBase):
 
             # 回复之间的间隔 (如果不是最后一次)
             if i < reply_count - 1:
-                interval = random.uniform(15, 35) # 15到35秒间隔
-                logger.info(f"等待 {interval:.2f} 秒后进行下一次回复...")
+                # 使用配置的间隔范围
+                interval = random.uniform(self._interval_min, self._interval_max)
+                logger.info(f"等待 {interval:.2f} 秒后进行下一次回复 ({self._interval_min}-{self._interval_max}秒范围)...")
                 time.sleep(interval)
 
         logger.info("============= ST98 回复任务结束 ==============")
 
     def _reply_internal(self, session: requests.Session, base_url: str, reply_fid: int, auto_replies: list, **kwargs) -> dict:
-        """ 实际执行单次回复的内部逻辑，包含历史检查和过滤 """
+        """ 实际执行单次回复的内部逻辑，恢复历史检查和过滤 """ # <-- 恢复 docstring
         result = {"status": "未知", "message": "", "tid": None, "reply_content": ""}
         tid_to_reply = None
         formhash = None
@@ -816,7 +846,7 @@ class st98sign(_PluginBase):
                 pass # 忽略格式错误的记录
         logger.info(f"从历史记录加载了 {len(replied_tids_history)} 个最近已处理的 TID 用于过滤。")
 
-        # --- 2. 获取板块页面并选择未回复的帖子 --- 
+        # --- 2. 获取板块页面并选择未回复的帖子 --- # <-- 恢复步骤标题
         forum_url = f"{base_url}/forum.php?mod=forumdisplay&fid={reply_fid}"
         try:
             logger.info(f"_reply_internal: 正在访问板块页面: fid={reply_fid}")
@@ -1200,6 +1230,29 @@ class st98sign(_PluginBase):
                             ]}
                         ]
                     },
+                    # --- 卡片 4: 高级设置 (延迟) ---
+                    {
+                        'component': 'VCard',
+                        'props': {'variant': 'outlined', 'class': 'mb-4'},
+                        'content': [
+                            {'component': 'VCardTitle', 'props': {'class': 'text-h6'}, 'text': '⏱️ 高级设置'},
+                            {'component': 'VCardText', 'content': [
+                                {'component': 'VRow', 'content': [
+                                    {'component': 'VCol', 'props': {'cols': 12, 'sm': 6}, 
+                                     'content': [{'component': 'VTextField', 'props': {'model': 'delay_min_seconds', 'label': '定时任务最小延迟 (秒)', 'type': 'number', 'placeholder': '5', 'hint': '任务触发后的等待范围下限'}}]}, # 简化 hint
+                                    {'component': 'VCol', 'props': {'cols': 12, 'sm': 6}, 
+                                     'content': [{'component': 'VTextField', 'props': {'model': 'delay_max_seconds', 'label': '定时任务最大延迟 (秒)', 'type': 'number', 'placeholder': '300', 'hint': '任务触发后的等待范围上限'}}]}
+                                ]},
+                                # 添加回复间隔配置行
+                                {'component': 'VRow', 'content': [
+                                    {'component': 'VCol', 'props': {'cols': 12, 'sm': 6}, 
+                                     'content': [{'component': 'VTextField', 'props': {'model': 'interval_min_seconds', 'label': '多次回复最小间隔 (秒)', 'type': 'number', 'placeholder': '15', 'hint': '连续回复之间的等待范围下限'}}]}, 
+                                    {'component': 'VCol', 'props': {'cols': 12, 'sm': 6}, 
+                                     'content': [{'component': 'VTextField', 'props': {'model': 'interval_max_seconds', 'label': '多次回复最大间隔 (秒)', 'type': 'number', 'placeholder': '35', 'hint': '连续回复之间的等待范围上限'}}]}
+                                ]}
+                            ]}
+                        ]
+                    }
                 ]
             }
         ]
@@ -1208,6 +1261,12 @@ class st98sign(_PluginBase):
             "cookie": "", "host": "", "proxy": "", "history_days": 30,
             "sign_onlyonce": False, "sign_cron": "0 8 * * *",
             "reply_onlyonce": False, "reply_cron": "0 10,18 * * *", "reply_fid": 103, "reply_times": 1, "auto_replies": default_replies_text,
+            # 添加延迟默认值
+            "delay_min_seconds": 5,
+            "delay_max_seconds": 300,
+            # 添加回复间隔默认值
+            "interval_min_seconds": 15,
+            "interval_max_seconds": 35
         }
         logger.debug("完成执行 get_form (st98sign)")
         return form_config, default_values
@@ -1583,17 +1642,17 @@ class st98sign(_PluginBase):
         return [
             {
                 "path": "/do_sign",
-                "method": "GET",
+                "methods": ["GET"],
                 "summary": "执行签到",
                 "description": "立即执行一次签到",
-                "function": self.sign
+                "endpoint": self.sign
             },
             {
                 "path": "/do_reply",
-                "method": "GET",
+                "methods": ["GET"],
                 "summary": "执行回复",
                 "description": "立即执行一次回复",
-                "function": self.reply
+                "endpoint": self.reply
             }
         ] 
 
